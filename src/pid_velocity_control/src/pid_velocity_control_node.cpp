@@ -39,7 +39,7 @@ public:
     // pub_on_cmd = false;
     first_flag_ = true;
     //publishers:
-    pub_ctrl_cmd_ = this->create_publisher<VehicleControlCommand>("raw_command", 10);
+    pub_ctrl_cmd_ = this->create_publisher<VehicleControlCommand>("raw_command_master", 10);
 
     //subscribers
     sub_kinematic_state_ = this->create_subscription<VehicleKinematicState>(

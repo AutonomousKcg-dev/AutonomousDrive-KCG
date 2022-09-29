@@ -1,9 +1,18 @@
+import enum
+from importlib.util import set_loader
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import Int8
 
 # Idan driver
 from autoware_auto_msgs.msg import VehicleControlCommand
+
+class State(enum.Enum):
+    ACC = 1
+    BRAKE = 2
+    LEFT = 3
+    RIGHT = 4
+    EMERGANCY = 5
 
 
 class Controller(Node):
@@ -20,50 +29,53 @@ class Controller(Node):
 
         # subscribers
         self.create_subscription(Int8, "switch_cmd", self.switch_cb, 10)
-        self.create_subscription(VehicleControlCommand, "raw_command_master", self.vel_pid_cb, 10)
+        self.create_subscription(
+            VehicleControlCommand, "raw_command_master", self.vel_pid_cb, 10)
 
         # publishers
-        self.idan_pub = self.create_publisher(VehicleControlCommand, "raw_command", 10)
-        self.timer = self.create_timer(10, self.control)
+        self.idan_pub = self.create_publisher(
+            VehicleControlCommand, "raw_command", 10)
+        self.timer = self.create_timer(0.1, self.control)
 
         # ego variables
-
         self.state = 0  # default ACC
-        self.idan_msg: VehicleControlCommand = None
-
-
+        self.idan_msg: VehicleControlCommand = VehicleControlCommand()
 
     def switch_cb(self, msg: Int8):
         # update the current state of the switch
         self.state = msg.data
-    
+
     def vel_pid_cb(self, msg: VehicleControlCommand):
         # update the idan command
         self.idan_msg = msg
 
     def control(self):
         """
-            This method decied the next step of the vehicle base on the given state
+            This method decieds the next step of the vehicle based on the given state
             from the switch.
         """
-        
-        # Left - change lane to left
-        if self.state == 2:
-            # TODO
-            pass
-        
-        # Right - change lane to left
-        elif self.state == 3:
-            # TODO
-            pass
-        
-        # Emergancy - publish negative acceleration 
-        elif self.state == 4:
-            #   TODO check if -1.0 is possible for emergancy
-            self.idan_msg.long_accel_mps2 = -0.4
+        # TODO Emergancy
+        if self.state == State.EMERGANCY.value:
+            self.idan_msg.long_accel_mps2 = -2.0
+            self.get_logger().info("EBrake")
+        # TODO Brake
+        elif self.state == State.BRAKE.value:
+            self.idan_msg.long_accel_mps2 = -1.0
+            self.get_logger().info("Brake")
+
+        # TODO Right
+        elif self.state == State.RIGHT.value:
+            # TODO change file (from here)
+            # TODO and add the raw command from ACC
+            self.get_logger().info("Moving to right lane")
+        # TODO Left
+        elif self.state == State.LEFT.value:
+            # TODO change file (from here)
+            # TODO and add the raw command from ACC
+            self.get_logger().info("Moving to left lane")
+
 
         self.idan_pub.publish(self.idan_msg)
-
 
 
 def main(args=None):

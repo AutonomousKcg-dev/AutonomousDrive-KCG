@@ -1,4 +1,6 @@
 # Ros Topics Data types - Vaya
+from time import time
+from typing import List
 import rclpy
 from rclpy.node import Node
 from tracked_object_msgs.msg import TrackedObjectArray, TrackedObject
@@ -15,6 +17,8 @@ import cv2
 """
     Auxuliary Classes
 """
+
+
 class front_padastrian:
     id = -1
     distance_x = 100
@@ -30,11 +34,13 @@ class front_car:
     velocity_x = 0
     velocity_y = 0
 
+
 class State(enum.Enum):
     ACC = 1
-    CHANGE_LANE = 2
-    STOP_CAR = 3
-    STOP_PED = 4
+    BRAKE = 2
+    LEFT = 3
+    RIGHT = 4
+    EMERGANCY = 5
 
 
 class Direction(enum.Enum):
@@ -46,16 +52,35 @@ class Direction(enum.Enum):
     Main Class
 """
 
+
+def _get_front_object(obj_list: List[TrackedObject]) -> TrackedObject:
+    """
+    given a list of objects find the closest object
+    """
+    if not obj_list:
+        return None
+
+    index = np.argmin([math.dist((0, 0), (obj.object_pose_m_quat.position.x,
+                      obj.object_pose_m_quat.position.y)) for obj in obj_list])
+
+    return obj_list[index]
+
+
 class switch_vaya(Node):
 
     def __init__(self, ref_dist=25):
         super().__init__("switch")
         # Subscribers
-        self.create_subscription(TrackedObjectArray, "tracked_objects", self.objects_message_callback, 10)
-        self.create_subscription(OccupancyGrid, "/occupancy_grid", self.occupancy_grid_callback, 10)
+        self.create_subscription(
+            TrackedObjectArray, "/tracked_objects", self.objects_message_callback, 10)
+        self.create_subscription(
+            OccupancyGrid, "/occupancy_grid", self.occupancy_grid_callback, 10)
+        self.create_subscription(
+            Odometry, "/ego_motion", self.ego_motion_callback, 10)
+
         # Publishers
         self.switch_cmd_pub = self.create_publisher(Int8, "switch_cmd", 10)
-        self.timer = self.create_timer(10, self.run)
+        self.timer = self.create_timer(0.1, self.run)
 
         # Object section
         self.pedestrian_list = []
@@ -65,17 +90,21 @@ class switch_vaya(Node):
 
         # Lanes
         self.switch_lane_direction = Direction.LEFT     # default
-        
+
         # ego car information
-        self.speed = 30
+        self.speed = 0.0
         self.radius = 3.7
         self.state = State.ACC  # ACC is the starting state
-        self.refernce_distance = ref_dist   # the distance the car should keep from its front car
+        # the distance the car should keep from its front car
+        self.refernce_distance = ref_dist
         self.side_lane_look_ahead = (-30, 30)  # meters
-        self.min_speed = 5     # front car should be atleast that speed
+        self.min_speed = 5     # front car should be atleast that speed km/h
         self.changed_lane = True
-    
-    def objects_message_callback(self, msg : TrackedObjectArray):
+
+        # start time
+        self._start_time = time()
+
+    def objects_message_callback(self, msg: TrackedObjectArray):
         """
             Same method as DOGTcb from cognata.
             update the vehicle list and pedestrian list.
@@ -87,7 +116,7 @@ class switch_vaya(Node):
         vehicle_list = []
         pedestrian_list = []
         for Tobject in msg.tracked_objects:
-            Tobject : TrackedObject = Tobject
+            Tobject: TrackedObject = Tobject
             if Tobject.object_type == 11000:
                 # Pedestrian
                 pedestrian_list.append(Tobject)
@@ -95,42 +124,62 @@ class switch_vaya(Node):
             elif Tobject.object_type == 20000:
                 # Vehicle
                 vehicle_list.append(Tobject)
-        
+
+        # TODO remove
+        # current_time = time()
+        # if 10.0 <= (current_time - self._start_time) <= 15.0:
+        #     vehicle = TrackedObject()
+        #     vehicle.object_pose_m_quat.position.x = 1.0
+        #     vehicle.object_pose_m_quat.position.y = 0.0
+        #     vehicle.object_pose_m_quat.position.z = 0.0
+        #     vehicle_list.append(vehicle)
+
         self.vehicle_list = vehicle_list
         self.pedestrian_list = pedestrian_list
+
+    def ego_motion_callback(self, msg: Odometry):
+        """
+        get ego motion data
+        """
+        self.speed = np.linalg.norm([
+            msg.twist.twist.linear.x,
+            msg.twist.twist.linear.y,
+            msg.twist.twist.linear.z
+        ])
 
     def occupancy_grid_callback(self, msg: OccupancyGrid):
         """
             This method is responsible for GUI & Occupancy Grid data update
         """
-        
-        if len(list(msg.data)) > 0:
-            data = map(self.change_color, msg.data) 
-            grid = np.array(list(data), dtype=np.uint8)
-            print("all zeros: ", all(np.equal(grid.flatten(), np.zeros_like(grid).flatten())))
-            grid = np.reshape(grid, (msg.info.height, msg.info.width, 3))
-            wheel_img = cv2.imread("src/python_publisher/python_publisher/submodules/tesla_wheel.png")
-            (h, w) = wheel_img.shape[:2]
-            (cX, cY) = (w // 2, h // 2)
-            angle = self.output_w * 45
-            M = cv2.getRotationMatrix2D((cX, cY), int(angle), 1.0)
-            wheel_img = cv2.warpAffine(wheel_img, M, (w, h))
-            wheel_img = cv2.putText(wheel_img, str(angle), (0, 50), cv2.FONT_HERSHEY_COMPLEX , 2, (255, 0, 0), 5)
-            cv2.imshow("Wheel", wheel_img)
-            cv2.imshow("frame", grid)
-            cv2.waitKey(1)
-        
-    
+        pass
+
+        # if len(list(msg.data)) > 0:
+        #     data = map(self.change_color, list(msg.data))
+        #     grid = np.array(list(data), dtype=np.uint8)
+        #     print("all zeros: ", all(np.equal(grid.flatten(), np.zeros_like(grid).flatten())))
+        #     grid = np.reshape(grid, (msg.info.height, msg.info.width, 3))
+        #     wheel_img = cv2.imread("src/python_publisher/python_publisher/submodules/tesla_wheel.png")
+        #     (h, w) = wheel_img.shape[:2]
+        #     (cX, cY) = (w // 2, h // 2)
+        #     angle = self.output_w * 45
+        #     M = cv2.getRotationMatrix2D((cX, cY), int(angle), 1.0)
+        #     wheel_img = cv2.warpAffine(wheel_img, M, (w, h))
+        #     wheel_img = cv2.putText(wheel_img, str(angle), (0, 50), cv2.FONT_HERSHEY_COMPLEX , 2, (255, 0, 0), 5)
+        #     cv2.imshow("Wheel", wheel_img)
+        #     cv2.imshow("frame", grid)
+        #     cv2.waitKey(1)
+
     def object_priority(self, front_car: front_car, front_ped: front_padastrian) -> bool:
         # find the closest object
         return (math.dist((0, 0), (front_car.distance_x, front_car.distance_y)) >
                 math.dist((0, 0), (front_ped.distance_x, front_ped.distance_y)))
-    
+
     def in_area(self, area_x, area_y, object: TrackedObject, direction: str) -> bool:
         """
             this method checks wheter the object is in the given area
         """
-        center_point = (object.object_pose_m_quat.position.x, object.object_pose_m_quat.position.y)
+        center_point = (object.object_pose_m_quat.position.x,
+                        object.object_pose_m_quat.position.y)
         if direction == 'left':
             if area_y[0] <= center_point[0] <= area_y[1]:
                 if area_x[0] <= center_point[1] <= area_x[1]:
@@ -149,12 +198,14 @@ class switch_vaya(Node):
             else, return False.
         """
         # decide if switch lane is possible, decide which direction to take (left, right)
-        left_area_x = (self.radius/2, self.radius*(3/2))        
-        left_area_y = (self.side_lane_look_ahead[0], self.side_lane_look_ahead[1])
+        left_area_x = (self.radius/2, self.radius*(3/2))
+        left_area_y = (
+            self.side_lane_look_ahead[0], self.side_lane_look_ahead[1])
         left_free = True
 
-        right_area_x = (-self.radius/2, -self.radius * (3/2))     
-        right_area_y = (self.side_lane_look_ahead[0], self.side_lane_look_ahead[1])
+        right_area_x = (-self.radius/2, -self.radius * (3/2))
+        right_area_y = (
+            self.side_lane_look_ahead[0], self.side_lane_look_ahead[1])
 
         # first, check left area
         for car in self.vehicle_list:
@@ -165,13 +216,13 @@ class switch_vaya(Node):
             if self.in_area(left_area_x, left_area_y, ped, 'left'):
                 # both lanes aren't free
                 left_free = False
-        
+
         if left_free:
             # choose left lane
             self.switch_lane_direction = Direction.LEFT
             print("LEFT TURN")
             return True
-        
+
         # Second, check for the right lane
         for car in self.vehicle_list:
             if self.in_area(right_area_x, right_area_y, car, 'right'):
@@ -189,24 +240,75 @@ class switch_vaya(Node):
         self.switch_lane_direction = Direction.RIGHT
         print("RIGHT TURN")
         return True
-    
-    def print_debug(self):
+
+    # TODO not in [m] -> in time to accident
+    # make decision
+    def get_decision(self):
+        areas = self.get_vehicle_areas_info()
+        final_decision = State.ACC
+
+        # get the front object
+        front_object = _get_front_object(areas["mid"])
+
+        if front_object:
+            # get front object velocity
+            front_object_speed = np.linalg.norm([
+                front_object.object_velocity_mps_radps.linear.x,
+                front_object.object_velocity_mps_radps.linear.y,
+                front_object.object_velocity_mps_radps.linear.z
+            ])  # m/s (a guess)
+
+            front_object_distance = np.linalg.norm([
+                front_object.object_pose_m_quat.position.x,
+                front_object.object_pose_m_quat.position.y,
+                front_object.object_pose_m_quat.position.z
+            ])
+
+            # calculate time to impact
+            time_to_imapct = (front_object_distance /
+                              (self.speed - front_object_speed))
+
+            self.get_logger().info("Our Speed: {} m/s, Front Car Speed: {} m/s, Front Object Type: {}".format(self.speed,
+                                                                                                              front_object_speed, front_object.object_type))
+            # TODO Emmergancy if
+            if 0.0 < time_to_imapct < 20.0:
+                # self.get_logger().info("Braking")
+                final_decision = State.EMERGANCY
+
+            # TODO Brake if
+            if 0.0 < time_to_imapct < 40.0:
+                # self.get_logger().info("Braking")
+                final_decision = State.BRAKE
+                
+            # TODO Right if
+
+            # TODO Left if
+
+            # TODO ACC
+            else:
+                final_decision = State.ACC
+
+        return final_decision
+
+    # TODO return also the Vehicle themself so we can messuare time to conflict for braking ...
+
+    def get_vehicle_areas_info(self):
         """
             Print Debug method.
         """
-        areas = {'left': 0, 'mid': 0, 'right': 0}
+        areas = {'left': [], 'mid': [], 'right': []}
         # decide if switch lane is possible, decide which direction to take (left, right)
         left_area_x = (self.radius/2, self.radius*(3/2)
-                       )        # Actually Y in cognata
+                       )        # Actually Y
 
-        # Actually X in cognata
+        # Actually X
         left_area_y = (
             self.side_lane_look_ahead[0], self.side_lane_look_ahead[1])
 
         right_area_x = (-self.radius/2, -self.radius *
-                        (3/2))     # Actually Y in cognata
+                        (3/2))     # Actually Y
 
-        # Actually X in cognata
+        # Actually X
         right_area_y = (
             self.side_lane_look_ahead[0], self.side_lane_look_ahead[1])
 
@@ -216,24 +318,24 @@ class switch_vaya(Node):
 
         for car in self.vehicle_list:
             if self.in_area(left_area_x, left_area_y, car, 'left'):
-                areas['left'] += 1
+                areas['left'].append(car)
             elif self.in_area(right_area_x, right_area_y, car, 'right'):
-                areas['right'] += 1
+                areas['right'].append(car)
             elif self.in_area(mid_area_x, mid_area_y, car, 'left'):
-                areas['mid'] += 1
-        
+                areas['mid'].append(car)
+
         for ped in self.pedestrian_list:
             if self.in_area(left_area_x, left_area_y, ped, 'left'):
-                areas['left'] += 1
+                areas['left'].append(ped)
             elif self.in_area(right_area_x, right_area_y, ped, 'right'):
-                areas['right'] += 1
+                areas['right'].append(ped)
             elif self.in_area(mid_area_x, mid_area_y, ped, 'left'):
-                areas['mid'] += 1
-        
-        print(areas)
+                areas['mid'].append(ped)
+
+        # self.get_logger().info("{}".format(areas))
         return areas
-    
-    def run(self, front_car: front_car, front_ped: front_padastrian):
+
+    def run(self, front_car: front_car = None, front_ped: front_padastrian = None):
         """
             this method is the main method.
             Update the switch state for the decision making.
@@ -242,20 +344,16 @@ class switch_vaya(Node):
         # Make a decision
         self.front_car = front_car
         self.front_ped = front_ped
+
         # need checking!!!!!
-        front_car_speed = np.linalg.norm(
-            (self.front_car.velocity_x, self.front_car.velocity_y)) * 3.6
+        # front_car_speed = np.linalg.norm(
+        #     (self.front_car.velocity_x, self.front_car.velocity_y)) * 3.6
 
         # print(front_car_speed)
-        self.state = State.ACC
-
-        # Brake section
-        areas = self.print_debug()
-        # There is an object on our lane
-        if areas['mid'] > 0:
-            # publish to controller node : 1 (Brake)
-            print("brake")
-
+        self.state = self.get_decision()
+        out = Int8()
+        out.data = int(self.state.value)
+        self.switch_cmd_pub.publish(out)
 
         # if self.state == State.ACC:
         #     if self.object_priority(self.front_car, self.front_ped):
@@ -296,9 +394,6 @@ class switch_vaya(Node):
         #     if self.changed_lane:
         #         self.state = State.ACC
         #         self.changed_lane = False
-            
-        # DEBUG
-        self.print_debug()
 
 
 def main(args=None):
@@ -317,8 +412,3 @@ def main(args=None):
 
 if __name__ == '__main__':
     main()
-
-
-
-
-

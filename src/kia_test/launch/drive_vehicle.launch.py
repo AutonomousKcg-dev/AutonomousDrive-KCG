@@ -67,8 +67,15 @@ def generate_launch_description():
     # we fricked here
     switch = Node(
         package="controller_pkg",
-        executable="switch_exe",
+        executable="switch",
         name="switch",
+        output="screen"
+    )
+    
+    controller = Node(
+        package="controller_pkg",
+        executable="controller",
+        name="controller",
         output="screen"
     )
     # and finished fricking here
@@ -92,5 +99,6 @@ def generate_launch_description():
         trajectory_following,
         pid_controller,
         switch, # this is fricked
+        controller,
     ])
     return ld
