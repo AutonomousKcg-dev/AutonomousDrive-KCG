@@ -1,12 +1,12 @@
 # Ros Topics Data types - Vaya
-from time import time
+import time
 from typing import List
 import rclpy
 from rclpy.node import Node
 from tracked_object_msgs.msg import TrackedObjectArray, TrackedObject
 from nav_msgs.msg import OccupancyGrid, Odometry
 from geometry_msgs.msg import Twist, Pose, Point
-from std_msgs.msg import Float32, Int8
+from std_msgs.msg import Float32, Int8, String
 
 # Generic Imports
 import enum
@@ -81,6 +81,7 @@ class switch_vaya(Node):
         # Publishers
         self.switch_cmd_pub = self.create_publisher(Int8, "switch_cmd", 10)
         self.timer = self.create_timer(0.1, self.run)
+        self.pub_traj = self.create_publisher(String, "lane_switch", 10)
 
         # Object section
         self.pedestrian_list = []
@@ -102,7 +103,8 @@ class switch_vaya(Node):
         self.changed_lane = True
 
         # start time
-        self._start_time = time()
+        self._start_time = time.time()
+        self.switch = False
 
     def objects_message_callback(self, msg: TrackedObjectArray):
         """
@@ -276,7 +278,7 @@ class switch_vaya(Node):
                 final_decision = State.EMERGANCY
 
             # TODO Brake if
-            if 0.0 < time_to_imapct < 40.0:
+            elif 0.0 < time_to_imapct < 40.0:
                 # self.get_logger().info("Braking")
                 final_decision = State.BRAKE
                 
@@ -341,6 +343,16 @@ class switch_vaya(Node):
             Update the switch state for the decision making.
             TODO Sync with the actual switch lane.
         """
+        
+        if not self.switch:
+            time.sleep(5)
+            msg = String()
+            msg.data = "RIGHT"
+            self.pub_traj.publish(msg=msg)
+            self.switch = True
+
+
+
         # Make a decision
         self.front_car = front_car
         self.front_ped = front_ped

@@ -7,6 +7,7 @@ from std_msgs.msg import Int8
 # Idan driver
 from autoware_auto_msgs.msg import VehicleControlCommand
 
+
 class State(enum.Enum):
     ACC = 1
     BRAKE = 2
@@ -56,12 +57,14 @@ class Controller(Node):
         """
         # TODO Emergancy
         if self.state == State.EMERGANCY.value:
-            self.idan_msg.long_accel_mps2 = -2.0
+            self.idan_msg.long_accel_mps2 = -0.4
             self.get_logger().info("EBrake")
         # TODO Brake
         elif self.state == State.BRAKE.value:
+            # TODO PID control - input - ( desired speed, our speed) - output - (long_aacel_mps2 -  pid low 
+            # value)
             self.idan_msg.long_accel_mps2 = -1.0
-            self.get_logger().info("Brake")
+            self.get_logger().info("Brake and slow")
 
         # TODO Right
         elif self.state == State.RIGHT.value:
@@ -74,7 +77,6 @@ class Controller(Node):
             # TODO and add the raw command from ACC
             self.get_logger().info("Moving to left lane")
 
-
         self.idan_pub.publish(self.idan_msg)
 
 
@@ -85,10 +87,8 @@ def main(args=None):
 
     rclpy.spin(control)
 
-    # Destroy the node explicitly
-    # (optional - otherwise it will be done automatically
-    # when the garbage collector destroys the node object)
     control.destroy_node()
+
     rclpy.shutdown()
 
 

@@ -22,7 +22,8 @@ def get_param_file(package_name, file_name):
         'params', default=[file_path])
 
 def generate_launch_description():
-    traj_file_name = get_share_file('kia_test', 'param/trajectories/trajectory_test_1.txt')
+    traj_file_name1 = get_share_file('kia_test', 'param/trajectories/trajectory_test_1.txt')
+    traj_file_name2 = get_share_file('kia_test', 'param/trajectories/trajectory_test_2.txt')
 
     # --------------------------------- Params -------------------------------
     pid_param_file = get_share_file(
@@ -44,7 +45,8 @@ def generate_launch_description():
         executable="file_trajectory_planner_exe",
         name="file_trajectory_planner",
         output="screen",
-        parameters=[{"trajectory_file_name": traj_file_name},
+        parameters=[{"trajectory_file_name1": traj_file_name1},
+                    {"trajectory_file_name2": traj_file_name2},
                     {"compute_velocity": False}],
         remappings=[
             ("/vehicle_kinematic_state","vehicle_state"),

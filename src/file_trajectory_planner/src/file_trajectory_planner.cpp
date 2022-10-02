@@ -39,6 +39,11 @@ bool FileTrajectoryPlanner::init_traj(std::string file_name, bool compute_veloci
   return false;
 }
 
+std::vector<TrajectoryPoint>& FileTrajectoryPlanner::get_traj()
+{
+  return full_traj_vector;
+}
+
 float comp_distance(TrajectoryPoint &s1, TrajectoryPoint &s2)
 {
   return sqrt((s1.x - s2.x) * (s1.x - s2.x) +
