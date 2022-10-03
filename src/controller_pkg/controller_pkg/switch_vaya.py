@@ -345,7 +345,7 @@ class switch_vaya(Node):
         """
         
         if not self.switch:
-            time.sleep(5)
+            time.sleep(25)
             msg = String()
             msg.data = "RIGHT"
             self.pub_traj.publish(msg=msg)
