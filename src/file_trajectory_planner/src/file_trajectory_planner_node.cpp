@@ -1,4 +1,6 @@
 #include <string>
+#include <algorithm>
+#include <iterator>
 #include "rclcpp/rclcpp.hpp"
 
 #include <autoware_auto_msgs/msg/vehicle_kinematic_state.hpp>
@@ -92,57 +94,65 @@ private:
   void set_traj(String::SharedPtr msg)
   {
     String file_name = *msg;
-    if (file_name.data.compare("RIGHT"))
+    if (file_name.data.compare("RIGHT") == 0)
     {
-      this->count_lane--;
+      std::cout << "here" << std::endl;
+      this->count_lane = 1;
       std::vector<TrajectoryPoint> next_lane = this->lanes.at(this->count_lane);
       // find the number of the points
       float p_ = 0.1;
       size_t old_lane_index = file_trajextory_planner_.get_closest_state_index(this->state_);
       file_trajextory_planner_.get_traj() = next_lane;
       size_t new_lane_index = file_trajextory_planner_.get_closest_state_index(this->state_);
+      // file_trajextory_planner_.get_traj().erase(file_trajextory_planner_.get_traj().begin(), file_trajextory_planner_.get_traj().begin() + new_lane_index + 2);
+      file_trajextory_planner_.get_traj().erase(file_trajextory_planner_.get_traj().begin(), file_trajextory_planner_.get_traj().begin() + 25);
+      std::cout << "[DEBUG] - Next Index: " << new_lane_index << "\n";
+ 
+      // for (size_t i = 0; i < int(100 * p_); i++)
+      // {
+      //   TrajectoryPoint p = weighted_avg(this->lanes.at(this->count_lane).at(new_lane_index),
+      //                                    this->lanes.at(this->count_lane - 1).at(old_lane_index), p_);
+      //   p_ *= i;
 
-      for (size_t i = 0; i < int(100 * p_); i++)
-      {
-        TrajectoryPoint p = weighted_avg(this->lanes.at(this->count_lane).at(new_lane_index),
-                                         this->lanes.at(this->count_lane + 1).at(old_lane_index), p_);
-        p_ *= i;
-
-        this->lanes.at(this->count_lane).insert(this->lanes.at(this->count_lane).begin()+new_lane_index,p);
-        new_lane_index++;
-        old_lane_index++;
-      }
-      next_lane = this->lanes.at(this->count_lane);
-      file_trajextory_planner_.get_traj() = next_lane;
+      //   file_trajextory_planner_.get_traj().insert(file_trajextory_planner_.get_traj().begin()+new_lane_index,p);
+      //   new_lane_index++;
+      //   old_lane_index++;
+      // }
+      // next_lane = this->lanes.at(this->count_lane);
+      // file_trajextory_planner_.get_traj() = next_lane;
     }
-    else
+    else if (file_name.data.compare("LEFT") == 0)
     {
-      this->count_lane++;
+      this->count_lane = 0;
       std::vector<TrajectoryPoint> next_lane = this->lanes.at(this->count_lane);
       // find the number of the points
       float p_ = 0.1;
       size_t old_lane_index = file_trajextory_planner_.get_closest_state_index(this->state_);
       file_trajextory_planner_.get_traj() = next_lane;
       size_t new_lane_index = file_trajextory_planner_.get_closest_state_index(this->state_);
+      // file_trajextory_planner_.get_traj().erase(file_trajextory_planner_.get_traj().begin(), file_trajextory_planner_.get_traj().begin() + new_lane_index + 2);
+      file_trajextory_planner_.get_traj().erase(file_trajextory_planner_.get_traj().begin(), file_trajextory_planner_.get_traj().begin() + 25);
+      
 
-      for (size_t i = 0; i < int(100 * p_); i++)
-      {
-        TrajectoryPoint p = weighted_avg(this->lanes.at(this->count_lane).at(new_lane_index),
-                                         this->lanes.at(this->count_lane - 1).at(old_lane_index), p_);
-        p_ *= i;
+      // for (size_t i = 0; i < int(100 * p_); i++)
+      // {
+      //   TrajectoryPoint p = weighted_avg(this->lanes.at(this->count_lane).at(new_lane_index),
+      //                                    this->lanes.at(this->count_lane + 1).at(old_lane_index), p_);
+      //   p_ *= i;
 
-        this->lanes.at(this->count_lane).insert(this->lanes.at(this->count_lane).begin()+new_lane_index,p);
-        new_lane_index++;
-        old_lane_index++;
-      }
-      next_lane = this->lanes.at(this->count_lane);
-      file_trajextory_planner_.get_traj() = next_lane;
+      //   this->lanes.at(this->count_lane).insert(this->lanes.at(this->count_lane).begin()+new_lane_index,p);
+      //   new_lane_index++;
+      //   old_lane_index++;
+      // }
+      // next_lane = this->lanes.at(this->count_lane);
+      // file_trajextory_planner_.get_traj() = next_lane;
     }
   }
 
   // publishers:
   rclcpp::Publisher<autoware_auto_msgs::msg::Trajectory>::SharedPtr pub_trajectory_;
   rclcpp::Publisher<Marker>::SharedPtr pub_marker_;
+
   // subscribers:
   rclcpp::Subscription<VehicleKinematicState>::SharedPtr sub_kinematic_state_;
   rclcpp::Subscription<String>::SharedPtr sub_lane;

@@ -21,21 +21,19 @@ def generate_launch_description():
     # --------------------------------- Params -------------------------------
 
     lexus_urdf_path = get_share_file(
-    package_name='lexus_rx_450h_description', file_name='urdf/lexus_rx_450h.urdf')
-
+        package_name='lexus_rx_450h_description', file_name='urdf/lexus_rx_450h.urdf')
 
     # -------------------------------- Nodes-----------------------------------
 
     rviz_cfg_path = get_share_file("kia_test", 'config/kia.rviz')
 
-
     urdf_publisher = Node(
         package='robot_state_publisher',
         executable='robot_state_publisher',
         name='robot_state_publisher',
-        arguments=[str(lexus_urdf_path)]        
+        arguments=[str(lexus_urdf_path)]
     )
-  
+
     rviz2 = Node(
         package='rviz2',
         executable='rviz2',
@@ -64,8 +62,41 @@ def generate_launch_description():
         output="screen",
     )
 
+    can_communication = Node(
+        package="idan_driver",
+        executable="can_communication_titan_exe",
+        # node_namespace="control",
+        name="can_communication",
+        output="screen",
+        # parameters=[{"borders_file_name": borders_file_name}],# str(param_file)  {"trajectory_file_name": traj_file_name}
+        # remappings=[
+        #     # ("vehicle_command", "raw_command"),
+        # ]
+    )
 
+    idan_sender = Node(
+        package="idan_driver",
+        executable="sender_exe",
+        # node_namespace="control",
+        name="idan_sender",
+        output="screen",
+        # parameters=[{"borders_file_name": borders_file_name}],# str(param_file)  {"trajectory_file_name": traj_file_name}
+        # remappings=[
+        #     # ("vehicle_command", "raw_command"),
+        # ]
+    )
 
+    idan_listener = Node(
+        package="idan_driver",
+        executable="listener_exe",
+        # node_namespace="control",
+        name="idan_listener",
+        output="screen",
+        # parameters=[{"borders_file_name": borders_file_name}],# str(param_file)  {"trajectory_file_name": traj_file_name}
+        # remappings=[
+        #     # ("vehicle_command", "raw_command"),
+        # ]
+    )
 
     # joystick_launch_file_path = get_share_file('joystick_vehicle_interface_nodes',
     #                                            'launch/joystick_vehicle_interface_node.launch.py')
@@ -77,7 +108,6 @@ def generate_launch_description():
     #     }.items()
     # )
 
-
     ld = LaunchDescription([
         urdf_publisher,
         rviz2,
@@ -85,6 +115,9 @@ def generate_launch_description():
         # joystick
         tf_map_gps,
         read_gsof,
-        parse_gsof
+        parse_gsof,
+        can_communication,
+        idan_sender,
+        idan_listener
     ])
     return ld

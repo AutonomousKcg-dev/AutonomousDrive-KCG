@@ -1,10 +1,11 @@
 from importlib.util import set_loader
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import Int8
+
+from std_msgs.msg import Float32, Int8, String
 
 # Idan driver
-from autoware_auto_msgs.msg import VehicleControlCommand
+from autoware_auto_msgs.msg import VehicleControlCommand, VehicleKinematicState
 
 # vaya import switch ego speed
 from nav_msgs.msg import OccupancyGrid, Odometry
@@ -39,23 +40,45 @@ class Controller(Node):
         super().__init__("controller")
 
         # subscribers
+        self.create_subscription(VehicleKinematicState, "vehicle_state", self.velo_state_cb, 10)
         self.create_subscription(Int8, "switch_cmd", self.switch_cb, 10)
         self.create_subscription(
             VehicleControlCommand, "raw_command_master", self.vel_pid_cb, 10)
+        # self.create_subscription(
+        #     Odometry, "/ego_motion", self.ego_motion_callback, 10)
 
         # publishers
         self.idan_pub = self.create_publisher(
             VehicleControlCommand, "raw_command", 10)
         self.timer = self.create_timer(0.1, self.control)
+        self.pub_traj = self.create_publisher(String, "lane_switch", 10)
+
 
         # ego variables
         self.state = 0  # default ACC
         self.idan_msg: VehicleControlCommand = VehicleControlCommand()
-        
-        # PID
-        self.velocity_PID_SLOW = PID(kp=0.8, ki=0, kd=0.13)
-        self.speed = None
+        self.v_state: VehicleKinematicState = VehicleKinematicState()
+         # PID
+        self.velocity_PID_SLOW = PID(kp=0.63, ki=0, kd=0.098)
+        self.speed = 0.0
         self.desired_speed = 0.0
+
+
+    def velo_state_cb(self,msg:VehicleKinematicState):
+    #v_state
+        self.v_state = msg
+        self.speed = (self.v_state.state.longitudinal_velocity_mps * 3.6) #in km/h
+
+    # def ego_motion_callback(self, msg: Odometry):
+    #     """
+    #     get ego motion data
+    #     """
+    #     self.speed = np.linalg.norm([
+    #         msg.twist.twist.linear.x,
+    #         msg.twist.twist.linear.y,
+    #         msg.twist.twist.linear.z
+    #     ])
+       
 
     def switch_cb(self, msg: Int8):
         # update the current state of the switch
@@ -65,15 +88,15 @@ class Controller(Node):
         # update the idan command
         self.idan_msg = msg
     
-    def ego_motion_callback(self, msg: Odometry):
-        """
-        get ego motion data
-        """
-        self.speed = np.linalg.norm([
-            msg.twist.twist.linear.x,
-            msg.twist.twist.linear.y,
-            msg.twist.twist.linear.z
-        ])
+    # def ego_motion_callback(self, msg: Odometry):
+    #     """
+    #     get ego motion data
+    #     """
+    #     self.speed = np.linalg.norm([
+    #         msg.twist.twist.linear.x,
+    #         msg.twist.twist.linear.y,
+    #         msg.twist.twist.linear.z
+    #     ])
 
     def velocity_controller(self):
         out = 0.0
@@ -97,18 +120,25 @@ class Controller(Node):
         elif self.state == State.BRAKE.value:
             # TODO PID control - input - ( desired speed, our speed) - output - (long_aacel_mps2 -  pid low
             # value)
-            if self.speed < 1.3:
+            if self.speed <= 4.0:
                 self.idan_msg.long_accel_mps2 = -0.2
-            else:
-                self.idan_msg.long_accel_mps2 = self.velocity_controller()
-            self.get_logger().info("Brake and slow")
 
+            else:
+                self.idan_msg.long_accel_mps2 = (-0.56) - self.velocity_controller()
+                
+            self.get_logger().info("Braking {} km/s, accel value {}".format(self.speed, self.idan_msg.long_accel_mps2))
+        
+        #this is the lane mover - pub_traj => make the move (make a button)
         # TODO Right
         elif self.state == State.RIGHT.value:
-            # TODO change file (from here)
+            msg = String()
+            msg.data = "RIGHT"
+            self.pub_traj.publish(msg=msg)
             # TODO and add the raw command from ACC
             self.get_logger().info("Moving to right lane")
-            
+        
+        
+
         # TODO Left
         elif self.state == State.LEFT.value:
             # TODO change file (from here)
