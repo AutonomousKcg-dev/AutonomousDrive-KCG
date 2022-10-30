@@ -9,6 +9,9 @@ from nav_msgs.msg import OccupancyGrid, Odometry
 from geometry_msgs.msg import Twist, Pose, Point
 from std_msgs.msg import Float32, Int8, String
 
+from pynput import keyboard
+from pynput.keyboard import KeyCode, Key
+
 # Idan driver
 from autoware_auto_msgs.msg import VehicleControlCommand, VehicleKinematicState
 
@@ -99,11 +102,11 @@ class switch_vaya(Node):
 
         # ego car information
         self.speed = 0.0
-        self.radius = 8.0
+        self.radius = 3.7
         self.state = State.ACC  # ACC is the starting state
         # the distance the car should keep from its front car
         self.refernce_distance = ref_dist
-        self.side_lane_look_ahead = (-30, 60)  # meters
+        self.side_lane_look_ahead = (-30, 30)  # meters
         self.min_speed = 5     # front car should be atleast that speed km/h
         self.changed_lane = True
         #couter for speed controler
@@ -112,6 +115,35 @@ class switch_vaya(Node):
         # start time
         self._start_time = time.time()
         self.switch = False
+
+        ### ADDITON
+        self.lane_switch = False
+        self.braking = False
+        self.keyboard_listener = keyboard.Listener(on_press=self.on_press, on_release=self.on_release)
+        self.keyboard_listener.start()
+
+    def on_press(self,key): # Emergancy - E, Braking - B, Lane - L, ACC - A
+        if key == KeyCode.from_char('e'):
+            self.state = State.EMERGANCY
+        
+        elif key == KeyCode.from_char('b'):
+            self.state = State.BRAKE
+
+        elif key == KeyCode.from_char('l'):
+            self.lane_switch = True
+            self.state = State.RIGHT
+        
+        elif key == KeyCode.from_char('a'):
+            self.state = State.ACC
+        # backup
+        else:
+            self.state = State.ACC
+        
+    def on_release(self, key):
+        if self.lane_switch == True:
+            self.lane_switch == False
+            self.state = State.ACC
+        ###
 
     def velo_state_cb(self,msg:VehicleKinematicState):
         #v_state
@@ -257,61 +289,80 @@ class switch_vaya(Node):
 
     # TODO not in [m] -> in time to accident
     # make decision
-    def get_decision(self):
+    # def get_decision(self):
 
-        areas = self.get_vehicle_areas_info()
+    #     areas = self.get_vehicle_areas_info()
 
-        # if self.couter >= 1 :
-        #     final_decision = State.BRAKE
+    #     if self.speed > 2.0:
+    #         # self.couter = self.couter + 1
+    #         self.braking = True
+    #     if self.braking:
+    #         final_decision = State.BRAKE
+    #     else:
+    #         final_decision = State.ACC
+
+    #     if self.speed < 0.1 and self.braking:
+    #         final_decision = State.ACC
+    #         self.braking = False
+
+
+    #     # if self.couter >= 1 :
+    #     #     final_decision = State.BRAKE
 
         
-        # get the front object
-        front_object = _get_front_object(areas["mid"])
 
-        if front_object:
-            # get front object velocity
-            front_object_speed = np.linalg.norm([
-                front_object.object_velocity_mps_radps.linear.x,
-                front_object.object_velocity_mps_radps.linear.y,
-                front_object.object_velocity_mps_radps.linear.z
-            ])  # m/s (a guess)
+    #     self.get_logger().info("Our Speed: {} m/s, The state {}, couter {}, state {} ".format(self.speed, final_decision, self.couter, final_decision))
+    #     # get the front object
+    #     front_object = _get_front_object(areas["mid"])
 
-            front_object_distance = np.linalg.norm([
-                front_object.object_pose_m_quat.position.x,
-                front_object.object_pose_m_quat.position.y,
-                front_object.object_pose_m_quat.position.z
-            ])
+    #     if front_object:
+    #         # get front object velocity
+    #         front_object_speed = np.linalg.norm([
+    #             front_object.object_velocity_mps_radps.linear.x,
+    #             front_object.object_velocity_mps_radps.linear.y,
+    #             front_object.object_velocity_mps_radps.linear.z
+    #         ])  # m/s (a guess)
 
-            # calculate time to impact
-            time_to_imapct = (front_object_distance /
-                              (max(self.speed, 1.5) - front_object_speed))
+    #         front_object_distance = np.linalg.norm([
+    #             front_object.object_pose_m_quat.position.x,
+    #             front_object.object_pose_m_quat.position.y,
+    #             front_object.object_pose_m_quat.position.z
+    #         ])
 
-            self.get_logger().info("time to impact {} sec ,Our Speed: {} m/s, Front Car Speed: {} m/s, Front Object distance: {} meters, state {}".format(time_to_imapct ,self.speed,
-                                                                                                                  front_object_speed, front_object_distance, final_decision))
-            # TODO Emmergancy if
-            if time_to_imapct <= 2.5:
-                # self.get_logger().info("Braking")
-                final_decision = State.EMERGANCY
+    #         # calculate time to impact
+    #         time_to_imapct = (front_object_distance /
+    #                           (max(self.speed, 1.5) - front_object_speed))
+    #         if front_object_distance < 30.0:
+    #             final_decision = State.EMERGANCY
 
-            # TODO Brake if
-            elif 2.5 < time_to_imapct <= 5.5:
-                # self.get_logger().info("Braking")
-                final_decision = State.BRAKE
-                print("SWITCH LANE TO THE LEFT!")
+    #         self.get_logger().info("time to impact {} sec ,Our Speed: {} m/s, Front Car Speed: {} m/s, Front Object distance: {} meters, state {}".format(time_to_imapct ,self.speed,
+    #                                                                                                               front_object_speed, front_object_distance, final_decision))
+    #         current_time = time()
+    #         if 10.0 <= (current_time - self._start_time) <= 15.0:
+    #             final_decision = State.RIGHT
+    #         # TODO Emmergancy if
+    #         if time_to_imapct <= 2.5:
+    #             # self.get_logger().info("Braking")
+    #             final_decision = State.EMERGANCY
+
+    #         # TODO Brake if
+    #         elif 2.0 < time_to_imapct <= 5.5:
+    #             # self.get_logger().info("Braking")
+    #             final_decision = State.BRAKE
+    #             print("SWITCH LANE TO THE LEFT!")
                 
-            # TODO Right if
-            elif 5.5 < time_to_imapct:
-                # self.get_logger().info("Braking")
-                final_decision = State.RIGHT
-                print("SWITCH LANE TO THE LEFT!")
-            # TODO Left if
+    #         # TODO Right if
+    #         elif 5.5 < time_to_imapct:
+    #             # self.get_logger().info("Braking")
+    #             final_decision = State.RIGHT
+    #             print("SWITCH LANE TO THE LEFT!")
+    #         # TODO Left if
 
-            # TODO ACC
-            else:
-                final_decision = State.ACC
-                
-        self.get_logger().info("Our Speed: {} m/s, The state {}".format(self.speed, final_decision))
-        return final_decision
+    #         # TODO ACC
+    #         else:
+    #             final_decision = State.ACC
+        
+    #     return final_decision
 
     # TODO return also the Vehicle themself so we can messuare time to conflict for braking ...
 
@@ -321,7 +372,8 @@ class switch_vaya(Node):
         """
         areas = {'left': [], 'mid': [], 'right': []}
         # decide if switch lane is possible, decide which direction to take (left, right)
-        left_area_x = (self.radius/2, self.radius*(3/2))        # Actually Y
+        left_area_x = (self.radius/2, self.radius*(3/2)
+                       )        # Actually Y
 
         # Actually X
         left_area_y = (
@@ -382,7 +434,7 @@ class switch_vaya(Node):
 
         # print(front_car_speed)
         # self.state = self.get_decision()
-        # self.get_logger().info("Our Speed: {} m/s, The state {} ".format(self.speed, self.state))
+        self.get_logger().info("Our Speed: {} m/s, The state {} ".format(self.speed, self.state))
         out = Int8()
         out.data = int(self.state.value)
         self.switch_cmd_pub.publish(out)
