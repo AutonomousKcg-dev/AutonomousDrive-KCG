@@ -44,6 +44,8 @@ class Controller(Node):
         self.create_subscription(Int8, "switch_cmd", self.switch_cb, 10)
         self.create_subscription(
             VehicleControlCommand, "raw_command_master", self.vel_pid_cb, 10)
+        # self.create_subscription(
+        #     Odometry, "/ego_motion", self.ego_motion_callback, 10)
 
         # publishers
         self.idan_pub = self.create_publisher(
@@ -67,6 +69,17 @@ class Controller(Node):
         self.v_state = msg
         self.speed = (self.v_state.state.longitudinal_velocity_mps * 3.6) #in km/h
 
+    # def ego_motion_callback(self, msg: Odometry):
+    #     """
+    #     get ego motion data
+    #     """
+    #     self.speed = np.linalg.norm([
+    #         msg.twist.twist.linear.x,
+    #         msg.twist.twist.linear.y,
+    #         msg.twist.twist.linear.z
+    #     ])
+       
+
     def switch_cb(self, msg: Int8):
         # update the current state of the switch
         self.state = msg.data
@@ -75,6 +88,15 @@ class Controller(Node):
         # update the idan command
         self.idan_msg = msg
     
+    # def ego_motion_callback(self, msg: Odometry):
+    #     """
+    #     get ego motion data
+    #     """
+    #     self.speed = np.linalg.norm([
+    #         msg.twist.twist.linear.x,
+    #         msg.twist.twist.linear.y,
+    #         msg.twist.twist.linear.z
+    #     ])
 
     def velocity_controller(self):
         out = 0.0
@@ -114,6 +136,7 @@ class Controller(Node):
             self.pub_traj.publish(msg=msg)
             # TODO and add the raw command from ACC
             self.get_logger().info("Moving to right lane")
+        
         
 
         # TODO Left

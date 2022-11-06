@@ -1,7 +1,7 @@
 # To-Do
-#1: make recording trajectory launch file within the lgsvl 
-#2: see how you can recive gps input from lgsvl
-#3: record the trajcetory under an understandable name _lgsvl
+# 1: make recording trajectory launch file within the lgsvl
+# 2: see how you can recive gps input from lgsvl
+# 3: record the trajcetory under an understandable name _lgsvl
 
 from inspect import Arguments
 from launch.actions import IncludeLaunchDescription
@@ -21,10 +21,9 @@ def get_share_file(package_name, file_name):
 
 
 def generate_launch_description():
-
-
     # --------------------------------- Params -------------------------------
-    traj_file_name = get_share_file('kia_test', 'param/trajectories/trajectory_test_1.txt')
+    traj_file_name = get_share_file(
+        'kia_test', 'param/trajectories/trajectory_test_1.txt')
 
     record_traj = Node(
         package='record_traj',
@@ -32,13 +31,11 @@ def generate_launch_description():
         # node_namespace='ego_vehicle',
         output='screen',
         parameters=[{"record_file": traj_file_name}
-                   ],    
+                    ],
         remappings=[
-            ("/vehicle_kinematic_state","vehicle_state")
-
+            ("/vehicle_kinematic_state", "vehicle_state")
         ]
     )
-
 
     # joystick_launch_file_path = get_share_file('joystick_vehicle_interface_nodes',
     #                                            'launch/joystick_vehicle_interface_node.launch.py')
@@ -49,7 +46,6 @@ def generate_launch_description():
     #         "control_command": LaunchConfiguration('control_command')
     #     }.items()
     # )
-
 
     ld = LaunchDescription([
         record_traj

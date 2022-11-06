@@ -80,7 +80,6 @@ def generate_launch_description():
         name="controller",
         output="screen"
     )
-    # and finished fricking here
 
     pid_controller = Node(
         package="pid_velocity_control",
@@ -92,6 +91,7 @@ def generate_launch_description():
             ("/vehicle_kinematic_state","vehicle_state"),        
         ]
     )
+    # and finished fricking here
 
    
 

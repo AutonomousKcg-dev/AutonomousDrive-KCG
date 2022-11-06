@@ -23,7 +23,6 @@ setup(
         'console_scripts': [
         "switch = controller_pkg.switch_vaya:main",
         "controller = controller_pkg.controller:main",
-        "test = controller_pkg.test_node:main",
         ],
     },
 )
