@@ -430,9 +430,9 @@ void OEM_E2CCProcessing::Dispatch(const EngineToClientMessage &baseInfo,
     // place your code here
     // ---------------------
     // This sample class received E2C sensor messages and logs them via Ros logger
-    RCLCPP_INFO(rclcpp::get_logger("E2C"), 
-                "Message recieved from Engine:\n Param:%s\nValue:", 
-                e2COutput.param(), e2COutput.value());
+    // RCLCPP_INFO(rclcpp::get_logger("E2C"), 
+    //             "Message recieved from Engine:\n Param:%s\nValue:", 
+    //             e2COutput.param(), e2COutput.value());
 }
 
 

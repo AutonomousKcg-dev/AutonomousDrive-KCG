@@ -20,7 +20,8 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'cognata_listener = cognata_pkg.cognata_listener:main'
+            'cognata_listener = cognata_pkg.cognata_listener:main',
+            "convtocognata = cognata_pkg.sim_to_cognata:main",
         ],
     },
 )
