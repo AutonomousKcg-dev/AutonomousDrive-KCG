@@ -97,7 +97,10 @@ private:
     if (file_name.data.compare("RIGHT") == 0)
     {
       std::cout << "here" << std::endl;
-      this->count_lane = 1;
+      // this->count_lane = 1;
+      if(this->count_lane < lanes.size() - 1){
+          this->count_lane++;
+      }
       std::vector<TrajectoryPoint> next_lane = this->lanes.at(this->count_lane);
       // find the number of the points
       float p_ = 0.1;
@@ -108,22 +111,13 @@ private:
       file_trajextory_planner_.get_traj().erase(file_trajextory_planner_.get_traj().begin(), file_trajextory_planner_.get_traj().begin() + 25);
       std::cout << "[DEBUG] - Next Index: " << new_lane_index << "\n";
  
-      // for (size_t i = 0; i < int(100 * p_); i++)
-      // {
-      //   TrajectoryPoint p = weighted_avg(this->lanes.at(this->count_lane).at(new_lane_index),
-      //                                    this->lanes.at(this->count_lane - 1).at(old_lane_index), p_);
-      //   p_ *= i;
-
-      //   file_trajextory_planner_.get_traj().insert(file_trajextory_planner_.get_traj().begin()+new_lane_index,p);
-      //   new_lane_index++;
-      //   old_lane_index++;
-      // }
-      // next_lane = this->lanes.at(this->count_lane);
-      // file_trajextory_planner_.get_traj() = next_lane;
     }
     else if (file_name.data.compare("LEFT") == 0)
     {
-      this->count_lane = 0;
+      // this->count_lane = 0;
+      if(this->count_lane > 0){
+          this->count_lane--;
+      }
       std::vector<TrajectoryPoint> next_lane = this->lanes.at(this->count_lane);
       // find the number of the points
       float p_ = 0.1;
@@ -132,20 +126,8 @@ private:
       size_t new_lane_index = file_trajextory_planner_.get_closest_state_index(this->state_);
       // file_trajextory_planner_.get_traj().erase(file_trajextory_planner_.get_traj().begin(), file_trajextory_planner_.get_traj().begin() + new_lane_index + 2);
       file_trajextory_planner_.get_traj().erase(file_trajextory_planner_.get_traj().begin(), file_trajextory_planner_.get_traj().begin() + 25);
-      
+      std::cout << "[DEBUG] - Next Index: " << new_lane_index << "\n";
 
-      // for (size_t i = 0; i < int(100 * p_); i++)
-      // {
-      //   TrajectoryPoint p = weighted_avg(this->lanes.at(this->count_lane).at(new_lane_index),
-      //                                    this->lanes.at(this->count_lane + 1).at(old_lane_index), p_);
-      //   p_ *= i;
-
-      //   this->lanes.at(this->count_lane).insert(this->lanes.at(this->count_lane).begin()+new_lane_index,p);
-      //   new_lane_index++;
-      //   old_lane_index++;
-      // }
-      // next_lane = this->lanes.at(this->count_lane);
-      // file_trajextory_planner_.get_traj() = next_lane;
     }
   }
 

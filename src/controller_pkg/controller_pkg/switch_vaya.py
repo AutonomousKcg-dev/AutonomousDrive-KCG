@@ -294,17 +294,17 @@ class switch_vaya(Node):
                 elif len(areas['right']) > 0:
                     right_obj = _get_front_object(areas['right'])
                     time_to_imapct = self.time_2_impact(right_obj)
-                    if time_to_imapct > 5.0:
+                    if time_to_imapct > 10.0:
                         final_decision = State.RIGHT
 
-                # Try left lane if right is taken
-                elif len(areas['left']) == 0:
-                    final_decision = State.LEFT
-                elif len(areas['left']) > 0:
-                    left_obj = _get_front_object(areas['left'])
-                    time_to_imapct = self.time_2_impact(left_obj)
-                    if time_to_imapct > 5.0:
-                        final_decision = State.RIGHT
+                    # Try left lane if right is taken
+                    elif len(areas['left']) == 0:
+                        final_decision = State.LEFT
+                    elif len(areas['left']) > 0:
+                        left_obj = _get_front_object(areas['left'])
+                        time_to_imapct = self.time_2_impact(left_obj)
+                        if time_to_imapct > 10.0:
+                            final_decision = State.RIGHT
                 
                 else:
                     final_decision = State.ACC

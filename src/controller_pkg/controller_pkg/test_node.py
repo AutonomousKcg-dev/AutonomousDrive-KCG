@@ -13,23 +13,39 @@ class TestNode(Node):
 
         self.timer = self.create_timer(0.1, self.run)
         self.dist = 0.0
+        self.dist_y = 0.0
 
 
     def run(self):
 
+        # first object
         object = TrackedObject()
-        object.object_pose_m_quat.position.y = 0.0 
+        object.object_pose_m_quat.position.y = 5.0 - self.dist_y
         object.object_pose_m_quat.position.x = 20.0 - self.dist
 
         object.object_velocity_mps_radps.linear.x = 0.0
         object.object_velocity_mps_radps.linear.y = 0.0
         object.object_velocity_mps_radps.linear.z = 0.0
         object.object_type = 20000
+
+
+        # second object
+        object2 = TrackedObject()
+        object2.object_pose_m_quat.position.y = -5.0
+        object2.object_pose_m_quat.position.x = 20.0 - self.dist
+
+        object2.object_velocity_mps_radps.linear.x = 0.0
+        object2.object_velocity_mps_radps.linear.y = 0.0
+        object2.object_velocity_mps_radps.linear.z = 0.0
+        object2.object_type = 20000
+
+        # Object list
         objects = TrackedObjectArray()
-        objects.tracked_objects = [object]
+        objects.tracked_objects = [object, object2]
 
         self.pub.publish(objects)
         self.dist += 0.1
+        self.dist_y += 0.01
 
 def main(args=None):
     rclpy.init(args=args)
