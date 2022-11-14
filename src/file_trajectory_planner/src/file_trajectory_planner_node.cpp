@@ -47,6 +47,7 @@ public:
     // publishers:
     pub_trajectory_ = this->create_publisher<autoware_auto_msgs::msg::Trajectory>("trajectory", 10);
     pub_marker_ = this->create_publisher<Marker>("trajectory_marker", 10);
+    
     // subscribers
     sub_kinematic_state_ = this->create_subscription<VehicleKinematicState>(
         "vehicle_state", 10, std::bind(&FileTrajectoryPlannerNode::on_state, this, _1));

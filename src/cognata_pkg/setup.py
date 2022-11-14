@@ -21,7 +21,8 @@ setup(
     entry_points={
         'console_scripts': [
             'cognata_listener = cognata_pkg.cognata_listener:main',
-            "convtocognata = cognata_pkg.sim_to_cognata:main",
+            'cognata_raw_command = cognata_pkg.cognata_raw_command:main',
+            'conv = cognata_pkg.sim_to_cognata:main',
         ],
     },
 )

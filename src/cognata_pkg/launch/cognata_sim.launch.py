@@ -25,8 +25,12 @@ def generate_launch_description():
                 ("/vehicle_kinematic_state", "vehicle_state")
             ]
         ),
+        # Node(
+        #     package='cognata_pkg',
+        #     executable='cognata_listener'
+        # ),
         Node(
             package='cognata_pkg',
-            executable='cognata_listener'
+            executable='cognata_raw_command'
         )
     ])

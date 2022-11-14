@@ -18,11 +18,16 @@ class ConvToCognata(Node):
         self.create_subscription(VehicleControlCommand, "/raw_command", self.accel_cb, 10)
         
         # publishers to Cognata
-        self.accel_pub = self.create_publisher(Float32, "/cognataSDK/car_command/acceleration_cmd", 10)
+        # self.accel_pub = self.create_publisher(Float32, "/cognataSDK/car_command/acceleration_cmd", 10)
+        self.gas_pub = self.create_publisher(Float32, "/cognataSDK/car_command/gas_cmd", 10)
+        self.brake_pub = self.create_publisher(Float32, "/cognataSDK/car_command/brake_cmd", 10)
+
         self.steer_pub = self.create_publisher(Float32, "/cognataSDK/car_command/steer_cmd", 10)
         
         # Vehicle variables
         self.acc = 0.0
+        self.brake_p = 0.0
+        self.gas_p = 0.0
         self.steer_ang = 0.0
 
 
@@ -35,12 +40,26 @@ class ConvToCognata(Node):
         # extract values
 
         self.acc = Float32()
+        self.brake_p = Float32()
+        self.gas_p = Float32()
         self.steer_ang = Float32()
         self.acc.data = msg.long_accel_mps2
         self.steer_ang.data = msg.front_wheel_angle_rad
 
+        # convert acc to gas & brake
+        if self.acc.data > 0.0:
+            self.gas_p.data = self.acc.data
+        elif self.acc.data < 0.0:
+            self.brake_p.data = abs(self.acc.data)
+        else:
+            self.brake_p.data = 0.0
+            self.gas_p.data = 0.0 
+
+
         # publish the commands
-        self.accel_pub.publish(self.acc)
+        
+        self.gas_pub.publish(self.gas_p)
+        self.brake_pub.publish(self.brake_p)
         self.steer_pub.publish(self.steer_ang)
 
 

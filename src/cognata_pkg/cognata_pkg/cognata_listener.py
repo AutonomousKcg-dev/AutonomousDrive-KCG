@@ -49,6 +49,7 @@ class CognataListener(Node):
 
         # publisher
         self._vehicle_state_publisher = self.create_publisher(VehicleKinematicState, "vehicle_state", 10)
+        # self.create_timer(0.1, self._pub)
 
         # state message
         self._vehicle_state = VehicleKinematicState()
@@ -71,21 +72,12 @@ class CognataListener(Node):
         heading.real = math.cos(angle * 0.5)
         heading.imag = math.sin(angle * 0.5)
         self._vehicle_state.state.heading = heading
-
-        # publish
-        self._pub()
     
     def imu_listener(self, msg: Imu):
         self._vehicle_state.state.acceleration_mps2 = msg.linear_acceleration.x
 
-        # publish
-        self._pub()
-
     def front_steer_angle_listener(self, msg: Float32):
         self._vehicle_state.state.front_wheel_angle_rad = msg.data
-
-        # publish
-        self._pub()
 
     def _pub(self):
         self._vehicle_state_publisher.publish(self._vehicle_state)
