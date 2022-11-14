@@ -79,14 +79,13 @@ class switch_vaya(Node):
             TrackedObjectArray, "/tracked_objects", self.objects_message_callback, 10)
         self.create_subscription(
             OccupancyGrid, "/occupancy_grid", self.occupancy_grid_callback, 10)
-        # self.create_subscription(
-        #     Odometry, "/ego_motion", self.ego_motion_callback, 10)
         self.create_subscription(VehicleKinematicState, "vehicle_state", self.velo_state_cb, 10)
 
         # Publishers
         self.switch_cmd_pub = self.create_publisher(Int8, "switch_cmd", 10)
         self.timer = self.create_timer(0.1, self.run)
         self.pub_traj = self.create_publisher(String, "lane_switch", 10)
+        self.test_pub = self.create_publisher(Int8, "test_topic", 10)
 
         # Object section
         self.pedestrian_list = []
@@ -285,29 +284,35 @@ class switch_vaya(Node):
             elif 2.5 < time_to_imapct <= 5.5:
                 final_decision = State.BRAKE
                 
-            # TODO Right if
+            # TODO Switch lane if
             elif 5.5 < time_to_imapct <= 10.0:
+                lane = Int8()
 
                 # Try right lane first
                 if len(areas['right']) == 0:
                     final_decision = State.RIGHT
+                    lane.data = 1
                 elif len(areas['right']) > 0:
                     right_obj = _get_front_object(areas['right'])
                     time_to_imapct = self.time_2_impact(right_obj)
                     if time_to_imapct > 10.0:
                         final_decision = State.RIGHT
+                        lane.data = 1
 
                     # Try left lane if right is taken
                     elif len(areas['left']) == 0:
                         final_decision = State.LEFT
+                        lane.data = 2
                     elif len(areas['left']) > 0:
                         left_obj = _get_front_object(areas['left'])
                         time_to_imapct = self.time_2_impact(left_obj)
                         if time_to_imapct > 10.0:
-                            final_decision = State.RIGHT
-                
-                else:
-                    final_decision = State.ACC
+                            final_decision = State.LEFT
+                            lane.data = 2
+                        else:
+                            final_decision = State.ACC
+                    
+                self.test_pub.publish(lane)
 
             # TODO ACC
             else:
